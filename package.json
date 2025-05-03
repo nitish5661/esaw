@@ -1,5 +1,5 @@
 {
-  "name": "whatsapp-bot",
+  "name": "whatsapp-ai-reply",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
