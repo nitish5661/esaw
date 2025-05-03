@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WhatsApp AI Reply System</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    .msg { border-bottom: 1px solid #ccc; padding: 10px; }
+    textarea { width: 100%; height: 60px; }
+    .reply-box { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>WhatsApp AI Reply System</h2>
+  <div id="qr"></div>
+  <div id="messages"></div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const qrDiv = document.getElementById('qr');
+    const messagesDiv = document.getElementById('messages');
+
+    socket.on('qr', (qrImg) => {
+      qrDiv.innerHTML = `<img src="${qrImg}" width="300" />`;
+    });
+
+    socket.on('ready', () => {
+      qrDiv.innerHTML = '<b>WhatsApp is connected.</b>';
+    });
+
+    socket.on('messages', (msgs) => {
+      messagesDiv.innerHTML = '';
+      msgs.forEach((msg, i) => {
+        const aiReply = i === msgs.length - 1 ? `Reply suggestion: "${generateAIReply(msg.body)}"` : '';
+        messagesDiv.innerHTML += `
+          <div class="msg">
+            <b>From:</b> ${msg.from}<br/>
+            <b>Message:</b> ${msg.body}<br/>
+            <div class="reply-box">
+              <textarea id="reply${i}">${aiReply}</textarea><br/>
+              <button onclick="sendReply('${msg.from}', 'reply${i}')">Send</button>
+            </div>
+          </div>
+        `;
+      });
+    });
+
+    function sendReply(to, textareaId) {
+      const msg = document.getElementById(textareaId).value;
+      fetch('/send', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ to, message: msg })
+      }).then(res => res.json()).then(console.log);
+    }
+
+    function generateAIReply(msg) {
+      // Basic dummy AI reply logic (replace this with real AI later)
+      if (msg.toLowerCase().includes('hello')) return "Hi! How can I help you?";
+      if (msg.toLowerCase().includes('price')) return "Please specify the product you're asking about.";
+      return "Thanks for your message!";
+    }
+  </script>
+</body>
+</html>
