@@ -1,61 +1,55 @@
-const fs = require('fs');
 const express = require('express');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
-const http = require('http');
-const socketIO = require('socket.io');
-const bodyParser = require('body-parser');
-
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
-const server = http.createServer(app);
-const io = socketIO(server);
+const port = process.env.PORT || 3000;
 
-app.use(bodyParser.json());
-app.use(express.static(__dirname + '/public'));
+// Serve static files from public folder
+app.use(express.static(path.join(__dirname, 'public')));
 
+// WhatsApp Client with session persistence using LocalAuth
 const client = new Client({
-  authStrategy: new LocalAuth() // Save session automatically
+    authStrategy: new LocalAuth(), // session auto-saved in .wwebjs_auth/
+    puppeteer: {
+        headless: true,
+        args: ['--no-sandbox']
+    }
 });
 
-let allMessages = [];
+// Global QR variable
+let qrCode = null;
 
-client.on('qr', async (qr) => {
-  const qrImage = await qrcode.toDataURL(qr);
-  io.emit('qr', qrImage);
+client.on('qr', (qr) => {
+    console.log('QR RECEIVED');
+    qrCode = qr;
 });
 
+// Save session automatically
 client.on('ready', () => {
-  console.log('✅ WhatsApp is ready!');
-  io.emit('ready');
-});
-
-client.on('message', message => {
-  const msg = {
-    from: message.from,
-    body: message.body,
-    timestamp: new Date().toISOString()
-  };
-  allMessages.push(msg);
-  io.emit('messages', allMessages);
-});
-
-app.post('/send', async (req, res) => {
-  const { to, message } = req.body;
-  try {
-    await client.sendMessage(to, message);
-    res.json({ status: 'sent' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to send message' });
-  }
-});
-
-app.get('*', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
+    console.log('Client is ready!');
+    qrCode = null; // Clear QR after login
 });
 
 client.initialize();
 
-server.listen(3000, () => {
-  console.log('🚀 Server running on http://localhost:3000');
+// Endpoint to fetch QR code if available
+app.get('/qr', async (req, res) => {
+    if (qrCode) {
+        const qrImage = await qrcode.toDataURL(qrCode);
+        res.send(`<img src="${qrImage}"><p>Scan to login</p>`);
+    } else {
+        res.send('Already authenticated!');
+    }
+});
+
+// Basic homepage route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.listen(port, () => {
+    console.log(`Server running on http://localhost:${port}`);
 });
