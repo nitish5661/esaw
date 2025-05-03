@@ -9,32 +9,33 @@ const bodyParser = require('body-parser');
 const app = express();
 const server = http.createServer(app);
 const io = socketIO(server);
+
 app.use(bodyParser.json());
 app.use(express.static(__dirname + '/public'));
 
 const client = new Client({
-  authStrategy: new LocalAuth()
+  authStrategy: new LocalAuth() // Save session, no repeat login
 });
 
 let allMessages = [];
 
 client.on('qr', async (qr) => {
-  const qrImageUrl = await qrcode.toDataURL(qr);
-  io.emit('qr', qrImageUrl);
+  const qrImage = await qrcode.toDataURL(qr);
+  io.emit('qr', qrImage);
 });
 
 client.on('ready', () => {
-  console.log('Client is ready!');
+  console.log('WhatsApp is ready!');
   io.emit('ready');
 });
 
 client.on('message', message => {
-  allMessages.push({
+  const msg = {
     from: message.from,
     body: message.body,
     timestamp: new Date().toISOString()
-  });
-
+  };
+  allMessages.push(msg);
   io.emit('messages', allMessages);
 });
 
@@ -51,5 +52,5 @@ app.post('/send', async (req, res) => {
 client.initialize();
 
 server.listen(3000, () => {
-  console.log('Server started on http://localhost:3000');
+  console.log('Server is running on http://localhost:3000');
 });
