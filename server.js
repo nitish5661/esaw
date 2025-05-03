@@ -14,7 +14,7 @@ app.use(bodyParser.json());
 app.use(express.static(__dirname + '/public'));
 
 const client = new Client({
-  authStrategy: new LocalAuth() // Save session, no repeat login
+  authStrategy: new LocalAuth() // Save session automatically
 });
 
 let allMessages = [];
@@ -25,7 +25,7 @@ client.on('qr', async (qr) => {
 });
 
 client.on('ready', () => {
-  console.log('WhatsApp is ready!');
+  console.log('✅ WhatsApp is ready!');
   io.emit('ready');
 });
 
@@ -49,8 +49,12 @@ app.post('/send', async (req, res) => {
   }
 });
 
+app.get('*', (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+});
+
 client.initialize();
 
 server.listen(3000, () => {
-  console.log('Server is running on http://localhost:3000');
+  console.log('🚀 Server running on http://localhost:3000');
 });
